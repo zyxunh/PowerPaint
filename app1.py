@@ -13,6 +13,8 @@ from transformers import CLIPTextModel, DPTFeatureExtractor, DPTForDepthEstimati
 
 from diffusers import UniPCMultistepScheduler
 from diffusers.pipelines.controlnet.pipeline_controlnet import ControlNetModel
+from unhcv.common.utils import obj_load, obj_dump
+
 from powerpaint.models.BrushNet_CA import BrushNetModel
 from powerpaint.models.unet_2d_condition import UNet2DConditionModel
 from powerpaint.pipelines.pipeline_PowerPaint import StableDiffusionInpaintPipeline as Pipeline
@@ -475,7 +477,19 @@ class PowerPaintController:
         result_paste = Image.fromarray(np.uint8(ours_np * 255))
         return [input_image["image"].convert("RGB"), result_paste], [controlnet_image, result_m]
 
-    def infer(
+    def infer(self, input_image, *arg, **kwargs):
+        root = "/home/tiger/dataset/inpainting_demo_v2"
+        show_root = "/home/tiger/show/inpainting_demo_v2_powerpaint_v2_0829_scale1.5"
+        os.makedirs(show_root, exist_ok=True)
+        names = obj_load("/home/tiger/dataset/inpainting_demo_v2/condition_indexes.yml")
+        for name in names:
+            input_image = dict(image=obj_load(os.path.join(root, name['image'])),
+                               mask=obj_load(os.path.join(root, name['inpainting_mask'])).convert("RGB"))
+            out = self.infer_sub(input_image, *arg, **kwargs)
+            show_name = os.path.join(show_root, name['image'])
+            out[0][0].save(show_name)
+
+    def infer_sub(
         self,
         input_image,
         text_guided_prompt,
@@ -498,7 +512,6 @@ class PowerPaintController:
         control_type="canny",
         controlnet_conditioning_scale=None,
     ):
-        breakpoint()
         if task == "text-guided":
             prompt = text_guided_prompt
             negative_prompt = text_guided_negative_prompt

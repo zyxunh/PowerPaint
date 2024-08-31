@@ -498,7 +498,6 @@ class PowerPaintController:
         control_type="canny",
         controlnet_conditioning_scale=None,
     ):
-        breakpoint()
         if task == "text-guided":
             prompt = text_guided_prompt
             negative_prompt = text_guided_negative_prompt
@@ -562,6 +561,59 @@ if __name__ == "__main__":
     # initialize the pipeline controller
     weight_dtype = torch.float16 if args.weight_dtype == "float16" else torch.float32
     controller = PowerPaintController(weight_dtype, args.checkpoint_dir, args.local_files_only, args.version)
+
+    # controller.infer()
+
+    # def test():
+    #     input_image = dict(image=, mask=)
+
+    if args.version == "ppt-v1":
+        out = controller.infer(
+                input_image,
+                text_guided_prompt,
+                text_guided_negative_prompt,
+                shape_guided_prompt,
+                shape_guided_negative_prompt,
+                fitting_degree,
+                ddim_steps,
+                scale,
+                seed,
+                task,
+                vertical_expansion_ratio,
+                horizontal_expansion_ratio,
+                outpaint_prompt,
+                outpaint_negative_prompt,
+                removal_prompt,
+                removal_negative_prompt,
+                enable_control,
+                input_control_image,
+                control_type,
+                controlnet_conditioning_scale)
+            outputs=[inpaint_result, gallery],
+        )
+    else:
+        run_button.click(
+            fn=controller.infer,
+            inputs=[
+                input_image,
+                text_guided_prompt,
+                text_guided_negative_prompt,
+                shape_guided_prompt,
+                shape_guided_negative_prompt,
+                fitting_degree,
+                ddim_steps,
+                scale,
+                seed,
+                task,
+                vertical_expansion_ratio,
+                horizontal_expansion_ratio,
+                outpaint_prompt,
+                outpaint_negative_prompt,
+                removal_prompt,
+                removal_negative_prompt,
+            ],
+            outputs=[inpaint_result, gallery],
+        )
 
     # ui
     with gr.Blocks(css="style.css") as demo:
