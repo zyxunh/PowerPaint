@@ -28,6 +28,9 @@ torch.set_grad_enabled(False)
 SD_PATH = "/home/tiger/model/stable-diffusion-v1-5"
 SD_INPAINTING_PATH = "/home/tiger/model/stable-diffusion-inpainting"
 
+SD_PATH = "/home/zhuyixing/model/PowerPaint-v2-1/realisticVisionV60B1_v51VAE"
+SD_INPAINTING_PATH = "/home/tiger/model/stable-diffusion-inpainting"
+checkpoint_dir = "/home/zhuyixing/model/PowerPaint-v2-1"
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -498,7 +501,6 @@ class PowerPaintController:
         control_type="canny",
         controlnet_conditioning_scale=None,
     ):
-        breakpoint()
         if task == "text-guided":
             prompt = text_guided_prompt
             negative_prompt = text_guided_negative_prompt
@@ -542,16 +544,19 @@ class PowerPaintController:
                 controlnet_conditioning_scale,
             )
         else:
-            return self.predict(
+            out = self.predict(
                 input_image, prompt, fitting_degree, ddim_steps, scale, seed, negative_prompt, task, None, None
             )
+            # return [input_image['image']], [input_image['image']]
+            return [out[0][0]], [out[1][1]]
+            return out
 
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser()
     args.add_argument("--weight_dtype", type=str, default="float16")
-    args.add_argument("--checkpoint_dir", type=str, default="./checkpoints/PowerPaint-v1")
-    args.add_argument("--version", type=str, default="ppt-v1")
+    args.add_argument("--checkpoint_dir", type=str, default="/home/zhuyixing/model/PowerPaint-v2-1")
+    args.add_argument("--version", type=str, default="ppt-v2")
     args.add_argument("--share", action="store_true")
     args.add_argument(
         "--local_files_only", action="store_true", help="enable it to use cached files without requesting from the hub"
