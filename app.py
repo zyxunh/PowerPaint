@@ -13,6 +13,8 @@ from transformers import CLIPTextModel, DPTFeatureExtractor, DPTForDepthEstimati
 
 from diffusers import UniPCMultistepScheduler
 from diffusers.pipelines.controlnet.pipeline_controlnet import ControlNetModel
+from unhcv.common.utils import obj_dump, find_path
+
 from powerpaint.models.BrushNet_CA import BrushNetModel
 from powerpaint.models.unet_2d_condition import UNet2DConditionModel
 from powerpaint.pipelines.pipeline_PowerPaint import StableDiffusionInpaintPipeline as Pipeline
@@ -26,11 +28,11 @@ from powerpaint.utils.utils import TokenizerWrapper, add_tokens
 torch.set_grad_enabled(False)
 
 SD_PATH = "/home/tiger/model/stable-diffusion-v1-5"
-SD_INPAINTING_PATH = "/home/tiger/model/stable-diffusion-inpainting"
 
-SD_PATH = "/home/zhuyixing/model/PowerPaint-v2-1/realisticVisionV60B1_v51VAE"
-SD_INPAINTING_PATH = "/home/tiger/model/stable-diffusion-inpainting"
-checkpoint_dir = "/home/zhuyixing/model/PowerPaint-v2-1"
+
+SD_PATH = find_path("model/PowerPaint-v2-1/realisticVisionV60B1_v51VAE")
+SD_INPAINTING_PATH = find_path("model/stable-diffusion-v1-5-inpainting")
+checkpoint_dir = find_path("model/PowerPaint-v2-1")
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -95,8 +97,8 @@ class PowerPaintController:
         # initialize powerpaint pipeline
         if version == "ppt-v1":
             self.pipe = Pipeline.from_pretrained(
-                SD_INPAINTING_PATH, torch_dtype=weight_dtype, local_files_only=local_files_only, requires_safety_checker=False
-            )
+                SD_INPAINTING_PATH, torch_dtype=weight_dtype, local_files_only=local_files_only, safety_checker=None, requires_safety_checker=False)
+
             self.pipe.tokenizer = TokenizerWrapper(
                 from_pretrained=SD_PATH,
                 subfolder="tokenizer",
@@ -551,6 +553,84 @@ class PowerPaintController:
             return [out[0][0]], [out[1][1]]
             return out
 
+    def infer(self, *args, **kwargs):
+        breakpoint()
+        # [None, '', '', '', '', 1, 45, 7.5, 1718266253, 'object-removal', 1, 1, '', '', '', '']
+        obj_dump("removal_default_input.yml", dict(args=k, kwargs=kwargs))
+        pass
+
+    def infer_removal(
+            self,
+            input_image=None, # dict(image=, mask=)
+            text_guided_prompt='',
+            text_guided_negative_prompt='',
+            shape_guided_prompt='',
+            shape_guided_negative_prompt='',
+            fitting_degree=1,
+            ddim_steps=45,
+            scale=7.5,
+            seed=1234,
+            task='object-removal',
+            vertical_expansion_ratio=1,
+            horizontal_expansion_ratio=1,
+            outpaint_prompt='',
+            outpaint_negative_prompt='',
+            removal_prompt='',
+            removal_negative_prompt='',
+            enable_control=False,
+            input_control_image=None,
+            control_type="canny",
+            controlnet_conditioning_scale=None,
+    ):
+        if task == "text-guided":
+            prompt = text_guided_prompt
+            negative_prompt = text_guided_negative_prompt
+        elif task == "shape-guided":
+            prompt = shape_guided_prompt
+            negative_prompt = shape_guided_negative_prompt
+        elif task == "object-removal":
+            prompt = removal_prompt
+            negative_prompt = removal_negative_prompt
+        elif task == "image-outpainting":
+            prompt = outpaint_prompt
+            negative_prompt = outpaint_negative_prompt
+            return self.predict(
+                input_image,
+                prompt,
+                fitting_degree,
+                ddim_steps,
+                scale,
+                seed,
+                negative_prompt,
+                task,
+                vertical_expansion_ratio,
+                horizontal_expansion_ratio,
+            )
+        else:
+            task = "text-guided"
+            prompt = text_guided_prompt
+            negative_prompt = text_guided_negative_prompt
+
+        # currently, we only support controlnet in PowerPaint-v1
+        if self.version == "ppt-v1" and enable_control and task == "text-guided":
+            return self.predict_controlnet(
+                input_image,
+                input_control_image,
+                control_type,
+                prompt,
+                ddim_steps,
+                scale,
+                seed,
+                negative_prompt,
+                controlnet_conditioning_scale,
+            )
+        else:
+            out = self.predict(
+                input_image, prompt, fitting_degree, ddim_steps, scale, seed, negative_prompt, task, None, None
+            )
+            # return [input_image['image']], [input_image['image']]
+            return [out[0][0]], [out[1][1]]
+            return out
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser()
