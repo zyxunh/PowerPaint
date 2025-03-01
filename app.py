@@ -14,6 +14,7 @@ from transformers import CLIPTextModel, DPTFeatureExtractor, DPTForDepthEstimati
 from diffusers import UniPCMultistepScheduler
 from diffusers.pipelines.controlnet.pipeline_controlnet import ControlNetModel
 from unhcv.common.utils import obj_dump, find_path
+from unhcv.common.utils.global_item import GLOBAL_ITEM
 
 from powerpaint.models.BrushNet_CA import BrushNetModel
 from powerpaint.models.unet_2d_condition import UNet2DConditionModel
@@ -204,7 +205,7 @@ class PowerPaintController:
 
             self.pipe.scheduler = UniPCMultistepScheduler.from_config(self.pipe.scheduler.config)
 
-            self.pipe.enable_model_cpu_offload()
+            # self.pipe.enable_model_cpu_offload()
             self.pipe = self.pipe.to("cuda")
 
     def get_depth_map(self, image):
@@ -329,6 +330,7 @@ class PowerPaintController:
         input_image["mask"] = input_image["mask"].resize((H, W))
         set_seed(seed)
 
+        GLOBAL_ITEM.time_dict.tic("model")
         if self.version == "ppt-v1":
             # for sd-inpainting based method
             result = self.pipe(
@@ -369,6 +371,7 @@ class PowerPaintController:
                 width=H,
                 height=W,
             ).images[0]
+        GLOBAL_ITEM.time_dict.toc("model")
 
         mask_np = np.array(input_image["mask"].convert("RGB"))
         red = np.array(result).astype("float") * 1
