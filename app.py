@@ -6,13 +6,15 @@ import cv2
 import gradio as gr
 import numpy as np
 import torch
-from controlnet_aux import HEDdetector, OpenposeDetector
+# from controlnet_aux import HEDdetector, OpenposeDetector
 from PIL import Image, ImageFilter
 from safetensors.torch import load_model
 from transformers import CLIPTextModel, DPTFeatureExtractor, DPTForDepthEstimation
 
 from diffusers import UniPCMultistepScheduler
 from diffusers.pipelines.controlnet.pipeline_controlnet import ControlNetModel
+from unhcv.common.utils import find_path, obj_load
+
 from powerpaint.models.BrushNet_CA import BrushNetModel
 from powerpaint.models.unet_2d_condition import UNet2DConditionModel
 from powerpaint.pipelines.pipeline_PowerPaint import StableDiffusionInpaintPipeline as Pipeline
@@ -25,6 +27,7 @@ from powerpaint.utils.utils import TokenizerWrapper, add_tokens
 
 torch.set_grad_enabled(False)
 
+SD_PATH = find_path("model/stable-diffusion-v1-5")
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -139,14 +142,14 @@ class PowerPaintController:
         else:
             # brushnet-based version
             unet = UNet2DConditionModel.from_pretrained(
-                "runwayml/stable-diffusion-v1-5",
+                SD_PATH,
                 subfolder="unet",
                 revision=None,
                 torch_dtype=weight_dtype,
                 local_files_only=local_files_only,
             )
             text_encoder_brushnet = CLIPTextModel.from_pretrained(
-                "runwayml/stable-diffusion-v1-5",
+                SD_PATH,
                 subfolder="text_encoder",
                 revision=None,
                 torch_dtype=weight_dtype,
@@ -538,9 +541,14 @@ class PowerPaintController:
                 controlnet_conditioning_scale,
             )
         else:
-            return self.predict(
+            input_image['mask'] = obj_load("/home/yixing/dataset/Adobe_EntitySeg/inpaiting_mask_lr_d5_loose_1105/mask/5.png").convert("RGB")
+            out = self.predict(
                 input_image, prompt, fitting_degree, ddim_steps, scale, seed, negative_prompt, task, None, None
             )
+            out[0][0].save("/home/yixing/paper/camera-ready/powerpaint/test5.jpg")
+            out[1][0].save("/home/yixing/paper/camera-ready/powerpaint/test6.jpg")
+            out[1][1].save("/home/yixing/paper/camera-ready/powerpaint/test7.jpg")
+            return out
 
 
 if __name__ == "__main__":
