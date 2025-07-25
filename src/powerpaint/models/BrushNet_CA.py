@@ -817,6 +817,8 @@ class BrushNetModel(ModelMixin, ConfigMixin):
                 aug_emb = self.add_embedding(add_embeds)
 
         emb = emb + aug_emb if aug_emb is not None else emb
+        if hasattr(self, "collector"):
+            self.collector["emb"] = emb
 
         # 2. pre-process
         brushnet_cond = torch.concat([sample, brushnet_cond], 1)

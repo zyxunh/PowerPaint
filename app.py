@@ -15,6 +15,7 @@ from transformers import CLIPTextModel, DPTFeatureExtractor, DPTForDepthEstimati
 from diffusers import UniPCMultistepScheduler
 from diffusers.pipelines.controlnet.pipeline_controlnet import ControlNetModel
 from unhcv.common.utils import find_path, obj_load
+from unhcv.nn.utils import analyse_module_channels, analyse_model_diff
 
 from powerpaint.models.BrushNet_CA import BrushNetModel
 from powerpaint.models.unet_2d_condition import UNet2DConditionModel
@@ -201,6 +202,9 @@ class PowerPaintController:
 
             self.pipe.enable_model_cpu_offload()
             self.pipe = self.pipe.to("cuda")
+            # k = analyse_model_diff(self.pipe.unet.cpu(), os.path.join(base_model_path, "unet/diffusion_pytorch_model.bin"))
+            # k = analyse_model_diff(self.pipe.text_encoder_brushnet.cpu(), os.path.join(base_model_path, "text_encoder/pytorch_model.bin"))
+            # k = analyse_model_diff(self.pipe.vae.cpu(), os.path.join(SD_PATH, "vae/diffusion_pytorch_model.safetensors"))
 
     def get_depth_map(self, image):
         image = self.feature_extractor(images=image, return_tensors="pt").pixel_values.to("cuda")
