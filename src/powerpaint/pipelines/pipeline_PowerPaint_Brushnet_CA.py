@@ -1417,6 +1417,7 @@ class StableDiffusionPowerPaintBrushNetPipeline(
                     guess_mode=guess_mode,
                     return_dict=False,
                 )
+                breakpoint()
 
                 if guess_mode and self.do_classifier_free_guidance:
                     # Inferred BrushNet only for the conditional batch.
