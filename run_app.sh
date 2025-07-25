@@ -1,0 +1,1 @@
+python3 app.py --checkpoint_dir ~/model/PowerPaint-v2-1 --version ppt-v2-1 --local_files_only --port 7880

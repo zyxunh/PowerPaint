@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 
+import PIL
 import cv2
 import gradio as gr
 import numpy as np
@@ -27,7 +28,6 @@ from powerpaint.utils.utils import TokenizerWrapper, add_tokens
 
 torch.set_grad_enabled(False)
 
-SD_PATH = find_path("model/stable-diffusion-v1-5")
 
 def set_seed(seed):
     torch.manual_seed(seed)
@@ -142,14 +142,14 @@ class PowerPaintController:
         else:
             # brushnet-based version
             unet = UNet2DConditionModel.from_pretrained(
-                SD_PATH,
+                find_path("model/stable-diffusion-v1-5"),
                 subfolder="unet",
                 revision=None,
                 torch_dtype=weight_dtype,
                 local_files_only=local_files_only,
             )
             text_encoder_brushnet = CLIPTextModel.from_pretrained(
-                SD_PATH,
+                find_path("model/stable-diffusion-v1-5"),
                 subfolder="text_encoder",
                 revision=None,
                 torch_dtype=weight_dtype,
@@ -541,14 +541,27 @@ class PowerPaintController:
                 controlnet_conditioning_scale,
             )
         else:
-            input_image['mask'] = obj_load("/home/yixing/dataset/Adobe_EntitySeg/inpaiting_mask_lr_d5_loose_1105/mask/5.png").convert("RGB")
-            out = self.predict(
+            image: PIL.Image.Image = input_image['background']
+            mask = input_image['layers'][0]
+            mask_np = np.array(mask)
+            mask_np[mask_np.max(-1) > 128] = 255
+            mask = PIL.Image.fromarray(mask_np)
+            mask = mask.convert("RGB")
+            input_image = dict(mask=mask, image=image)
+            # mask = obj_load("/home/yixing/paper/camera-ready/powerpaint/inpainting_mask_02.png")
+            # mask_name = "/home/yixing/paper/camera-ready/powerpaint/inpainting_mask_02.png"
+            # image_name = "/home/yixing/paper/camera-ready/powerpaint/000000532901.jpg"
+            # mask_name = "/home/yixing/paper/camera-ready/powerpaint/000000532901_3.png"
+            # image_name = "/home/yixing/paper/camera-ready/powerpaint/000000313034.jpg"
+            # mask_name = "/home/yixing/paper/camera-ready/powerpaint/000000313034_6.png"
+            # mask = obj_load(mask_name)
+            # mask = mask.convert("RGB")
+            # input_image["mask"] = mask
+            # input_image["image"] = obj_load(image_name).convert('RGB')
+            output = self.predict(
                 input_image, prompt, fitting_degree, ddim_steps, scale, seed, negative_prompt, task, None, None
             )
-            out[0][0].save("/home/yixing/paper/camera-ready/powerpaint/test5.jpg")
-            out[1][0].save("/home/yixing/paper/camera-ready/powerpaint/test6.jpg")
-            out[1][1].save("/home/yixing/paper/camera-ready/powerpaint/test7.jpg")
-            return out
+            return output
 
 
 if __name__ == "__main__":
@@ -587,7 +600,8 @@ if __name__ == "__main__":
         with gr.Row():
             with gr.Column():
                 gr.Markdown("### Input image and draw mask")
-                input_image = gr.Image(source="upload", tool="sketch", type="pil")
+                # input_image = gr.Image(type="pil", tool="img_tool")
+                input_image = gr.ImageEditor(label="input_image", type="pil", image_mode="RGB")
 
                 task = gr.Radio(
                     ["text-guided", "object-removal", "shape-guided", "image-outpainting"],
@@ -678,7 +692,7 @@ if __name__ == "__main__":
                     )
                 tab_shape_guided.select(fn=select_tab_shape_guided, inputs=None, outputs=task)
 
-                run_button = gr.Button(label="Run")
+                run_button = gr.Button()
                 with gr.Accordion("Advanced options", open=False):
                     ddim_steps = gr.Slider(label="Steps", minimum=1, maximum=50, value=45, step=1)
                     scale = gr.Slider(
